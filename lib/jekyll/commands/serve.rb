@@ -3,6 +3,7 @@ module Jekyll
   module Commands
     class Serve < Command
       def self.process(options)
+        require 'open3'
         require 'webrick'
         include WEBrick
 
@@ -22,6 +23,21 @@ module Jekyll
           :BindAddress => options['host'],
           :MimeTypes => mime_types
         )
+
+        s.mount_proc '/git/status' do |req, res|
+          stdin, stdout, stderr = Open3.popen3('git status')
+          res.body = "stdout:\n#{stdout.read}\n\nstderr:\n#{stderr.read}\n"
+        end
+
+        s.mount_proc '/git/log' do |req, res|
+          stdin, stdout, stderr = Open3.popen3('git log')
+          res.body = "stdout:\n#{stdout.read}\n\nstderr:\n#{stderr.read}\n"
+        end
+
+        s.mount_proc '/git/pull' do |req, res|
+          stdin, stdout, stderr = Open3.popen3('git pull origin master')
+          res.body = "stdout:\n#{stdout.read}\n\nstderr:\n#{stderr.read}\n"
+        end
 
         s.mount(options['baseurl'], HTTPServlet::FileHandler, destination, fh_option)
         t = Thread.new { s.start }
